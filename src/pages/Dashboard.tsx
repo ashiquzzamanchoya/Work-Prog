@@ -7,6 +7,7 @@ import {
   AlertCircle,
   TrendingUp,
   MoreHorizontal,
+  Folder,
 } from "lucide-react";
 import { useTasks } from "@/context/TaskContext";
 import { useAuth } from "@/context/AuthContext";
@@ -14,6 +15,7 @@ import { useUsers } from "@/context/UserContext";
 import { cn } from "@/lib/utils";
 import { format, isToday, isPast } from "date-fns";
 import { RotateCcw } from "lucide-react";
+import { categories } from "@/data/mockData";
 
 import { Variants } from "framer-motion";
 
@@ -114,6 +116,10 @@ export default function Dashboard() {
     recentActivity = tasks.slice(0, 4);
   }
 
+  const activeProjects = Array.from(
+    new Set(tasks.filter((t) => t.status !== "Completed").map((t) => t.category)),
+  );
+
   const displayedTasks =
     activeFilter === "focus"
       ? focusTasks.slice(0, 5)
@@ -178,12 +184,10 @@ export default function Dashboard() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8"
       >
         <KpiCard
-          title={
-            (!isAdminUser) ? "My Active Tasks" : "Total Active"
-          }
+          title={!isAdminUser ? "My Active Tasks" : "Total Active"}
           value={activeTasks.length}
           trend="+3 this week"
           icon={TrendingUp}
@@ -193,9 +197,19 @@ export default function Dashboard() {
           onClick={() => setActiveFilter("active")}
         />
         <KpiCard
-          title={(!isAdminUser) ? "Due Today" : "Urgent"}
+          title="Active Projects"
+          value={activeProjects.length}
+          trend="Across categories"
+          icon={Folder}
+          color="text-indigo-400"
+          bg="bg-indigo-400/10"
+          isActive={false}
+          onClick={() => {}}
+        />
+        <KpiCard
+          title={!isAdminUser ? "Due Today" : "Urgent"}
           value={dueTodayTasks.length}
-          trend={(!isAdminUser) ? "2 urgent" : "Needs attention"}
+          trend={!isAdminUser ? "2 urgent" : "Needs attention"}
           icon={Clock}
           color="text-warning"
           bg="bg-warning/10"
@@ -203,9 +217,7 @@ export default function Dashboard() {
           onClick={() => setActiveFilter("due")}
         />
         <KpiCard
-          title={
-            isAdminUser ? "Awaiting Feedback" : "Pending Review"
-          }
+          title={isAdminUser ? "Awaiting Feedback" : "Pending Review"}
           value={reviewTasks.length}
           trend="Needs attention"
           icon={AlertCircle}
@@ -313,6 +325,54 @@ export default function Dashboard() {
 
         {/* Sidebar Column */}
         <div className="space-y-8">
+          <motion.section
+            variants={itemVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <h2 className="text-xl font-display font-semibold mb-4">
+              Active Projects
+            </h2>
+            <div className="glass-card rounded-2xl p-5 space-y-5">
+              {categories.map((cat) => {
+                const catTasks = tasks.filter((t) => t.category === cat);
+                const activeCatTasks = catTasks.filter(
+                  (t) => t.status !== "Completed",
+                );
+                if (activeCatTasks.length === 0) return null;
+
+                const total = catTasks.length;
+                const completed = catTasks.filter(
+                  (t) => t.status === "Completed",
+                );
+                const progress =
+                  total > 0 ? Math.round((completed.length / total) * 100) : 0;
+
+                return (
+                  <div key={cat} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-primary" />
+                        <span className="text-sm font-medium text-gray-200">
+                          {cat}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-400">
+                        {activeCatTasks.length} active
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.section>
+
           <motion.section
             variants={itemVariants}
             initial="hidden"
