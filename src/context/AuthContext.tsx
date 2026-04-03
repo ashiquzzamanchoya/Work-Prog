@@ -33,6 +33,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        const allowedEmails = [
+          "rodbonds1169@gmail.com",
+          "ashiquzzamanchoya@gmail.com",
+          "lazerlit.me@gmail.com",
+        ];
+
+        if (!firebaseUser.email || !allowedEmails.includes(firebaseUser.email)) {
+          console.error("Unauthorized access attempt by:", firebaseUser.email);
+          await signOut(auth);
+          setCurrentUser(null);
+          setIsLoading(false);
+          // We can't use window.alert in iframe, but we can set an error state or just let the login page handle it
+          // For now, signing out will redirect them back to login
+          return;
+        }
+
         const userRef = doc(db, "users", firebaseUser.uid);
         try {
           const userSnap = await getDoc(userRef);

@@ -40,12 +40,21 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAllowedEmail() {
+      return isAuthenticated() && 
+        request.auth.token.email in [
+          "rodbonds1169@gmail.com",
+          "ashiquzzamanchoya@gmail.com",
+          "lazerlit.me@gmail.com"
+        ];
+    }
+
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAllowedEmail() && request.auth.uid == userId;
     }
 
     function isAdmin() {
-      return isAuthenticated() &&
+      return isAllowedEmail() &&
         (request.auth.token.email == "lazerlit.me@gmail.com");
     }
 
@@ -75,7 +84,7 @@ service cloud.firestore {
     // ===============================================================
     
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAllowedEmail();
       
       // Only the owner can create their profile.
       allow create: if isOwner(userId) && isValidUser(request.resource.data);
@@ -90,10 +99,10 @@ service cloud.firestore {
 
     match /tasks/{taskId} {
       // All members can see other members' work.
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidTask(request.resource.data);
-      allow update: if isAuthenticated() && isValidTask(request.resource.data);
-      allow delete: if isAuthenticated() || isAdmin();
+      allow read: if isAllowedEmail();
+      allow create: if isAllowedEmail() && isValidTask(request.resource.data);
+      allow update: if isAllowedEmail() && isValidTask(request.resource.data);
+      allow delete: if isAllowedEmail() || isAdmin();
     }
 
     // Allow public read for connection test
