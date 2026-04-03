@@ -4,6 +4,38 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: Firebase Auth UID
+    // Fields:
+    //   - id: string (required) - UID
+    //   - name: string (required) - Display name
+    //   - email: string (required) - User email
+    //   - avatar: string (optional) - Profile photo URL
+    //   - role: string (required) - Graphics Designer, Manager, Boss, admin
+    //
+    // Collection: tasks
+    // Document ID: Task ID
+    // Fields:
+    //   - id: string (required)
+    //   - title: string (required)
+    //   - brief: string (optional)
+    //   - category: string (required)
+    //   - priority: string (required)
+    //   - status: string (required)
+    //   - assigneeId: string (optional)
+    //   - reporterId: string (required)
+    //   - dueDate: string (required) - ISO 8601
+    //   - createdAt: string (required) - ISO 8601
+    //   - progress: number (required)
+    //   - commentsCount: number (required)
+    //   - attachmentsCount: number (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
     // Helper Functions
     // ===============================================================
     function isAuthenticated() {
@@ -14,21 +46,53 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "lazerlit.me@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role']) &&
+             data.id is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.role in ['Graphics Designer', 'Manager', 'Boss', 'admin'];
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['id', 'title', 'status', 'reporterId', 'createdAt']) &&
+             data.id is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.status is string &&
+             data.reporterId is string &&
+             data.createdAt is string && data.createdAt.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
     
     match /users/{userId} {
+      // Users can read their own profile. Admins can read all.
+      // For this app, we allow all authenticated users to read profiles to show names/avatars in tasks.
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      
+      // Only the owner can create their profile.
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role != 'admin' || isAdmin());
+      
+      // Only the owner or an admin can update.
+      allow update: if (isOwner(userId) || isAdmin()) && 
+                    isValidUser(request.resource.data) &&
+                    (request.resource.data.role == resource.data.role || isAdmin());
     }
 
     match /tasks/{taskId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTask(request.resource.data);
+      allow update: if isAuthenticated() && isValidTask(request.resource.data);
+      allow delete: if isAuthenticated() || isAdmin();
     }
   }
 }

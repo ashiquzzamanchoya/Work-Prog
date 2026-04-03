@@ -13,6 +13,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import NewTaskModal from "./NewTaskModal";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/firebase";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -38,6 +40,15 @@ export default function Layout() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleRoleChange = async (newRole: string) => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(doc(db, "users", currentUser.id), { role: newRole });
+    } catch (error) {
+      console.error("Failed to update role", error);
+    }
+  };
 
   if (!currentUser) return null;
 
@@ -133,6 +144,23 @@ export default function Layout() {
                 exit={{ opacity: 0, y: 10 }}
                 className="absolute bottom-full left-4 right-4 mb-2 bg-surface border border-surface-border rounded-xl shadow-2xl overflow-hidden z-50"
               >
+                <div className="px-4 py-3 border-b border-surface-border/50">
+                  <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider font-semibold">Test Roles</p>
+                  <div className="flex flex-col gap-1">
+                    {['Graphics Designer', 'Manager', 'Boss'].map(role => (
+                      <button
+                        key={role}
+                        onClick={() => handleRoleChange(role)}
+                        className={cn(
+                          "text-left text-sm px-2 py-1.5 rounded-lg transition-colors",
+                          currentUser.role === role ? "bg-primary/20 text-primary font-medium" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                        )}
+                      >
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <button
                   onClick={() => {
                     setIsUserMenuOpen(false);

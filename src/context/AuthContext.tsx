@@ -4,7 +4,7 @@ import {
   User as FirebaseUser,
   signOut,
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/firebase";
 import { handleFirestoreError, OperationType } from "@/lib/firestore-error";
 
@@ -29,19 +29,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let userUnsubscribe: (() => void) | undefined;
+
+    const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Fetch or create user in Firestore
         const userRef = doc(db, "users", firebaseUser.uid);
         try {
           const userSnap = await getDoc(userRef);
-          let appUser: AppUser;
 
-          if (userSnap.exists()) {
-            appUser = userSnap.data() as AppUser;
-          } else {
+          if (!userSnap.exists()) {
             // Create new user profile
-            appUser = {
+            const appUser: AppUser = {
               id: firebaseUser.uid,
               name: firebaseUser.displayName || "New User",
               email: firebaseUser.email || "",
@@ -52,8 +50,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             };
             await setDoc(userRef, appUser);
           }
-          setCurrentUser(appUser);
-          setIsLoading(false);
+          
+          // Listen to real-time updates for the current user (e.g. role changes)
+          userUnsubscribe = onSnapshot(userRef, (docSnap) => {
+            if (docSnap.exists()) {
+              setCurrentUser(docSnap.data() as AppUser);
+            }
+            setIsLoading(false);
+          }, (error) => {
+            console.error("Error listening to user data:", error);
+            setIsLoading(false);
+            handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+          });
+
         } catch (error) {
           console.error("Error fetching user data:", error);
           setIsLoading(false);
@@ -62,10 +71,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setCurrentUser(null);
         setIsLoading(false);
+        if (userUnsubscribe) {
+          userUnsubscribe();
+        }
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      authUnsubscribe();
+      if (userUnsubscribe) {
+        userUnsubscribe();
+      }
+    };
   }, []);
 
   const logout = async () => {
