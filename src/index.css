@@ -10,9 +10,9 @@
   --color-surface-hover: rgba(255, 255, 255, 0.06);
   --color-surface-border: rgba(255, 255, 255, 0.08);
   
-  --color-primary: #6366f1;
-  --color-primary-glow: rgba(99, 102, 241, 0.4);
-  --color-secondary: #a855f7;
+  --color-primary: #C82323;
+  --color-primary-glow: rgba(200, 35, 35, 0.4);
+  --color-secondary: #8B0000;
   
   --color-success: #10b981;
   --color-warning: #f59e0b;
