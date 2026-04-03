@@ -28,9 +28,7 @@
         "reporterId": { "type": "string" },
         "dueDate": { "type": "string" },
         "createdAt": { "type": "string" },
-        "progress": { "type": "number" },
-        "commentsCount": { "type": "number" },
-        "attachmentsCount": { "type": "number" }
+        "progress": { "type": "number" }
       },
       "required": ["id", "title", "status", "reporterId", "createdAt"]
     }

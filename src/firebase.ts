@@ -14,8 +14,12 @@ async function testConnection() {
   } catch (error) {
     if(error instanceof Error && error.message.includes('the client is offline')) {
       console.error("Please check your Firebase configuration. ");
+    } else if (error instanceof Error && error.message.includes('Missing or insufficient permissions')) {
+      // This is expected before login, so we can ignore it or log it as a warning
+      console.warn("Firestore connection test: Waiting for authentication...");
+    } else {
+      console.error("Firestore connection test failed:", error);
     }
-    console.error("Firestore connection test failed:", error);
   }
 }
 testConnection();

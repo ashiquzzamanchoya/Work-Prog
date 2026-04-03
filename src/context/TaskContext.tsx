@@ -17,6 +17,7 @@ interface TaskContextType {
   addTask: (task: Task) => Promise<void>;
   updateTask: (task: Task) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
+  resetTasks: () => Promise<void>;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -33,30 +34,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     const unsubscribe = onSnapshot(
       collection(db, "tasks"),
-      async (snapshot) => {
-        if (snapshot.empty) {
-          // Seed database with mock data for demo purposes
-          const { mockTasks } = await import("@/data/mockData");
-          for (const task of mockTasks) {
-            try {
-              await setDoc(doc(db, "tasks", task.id), task);
-            } catch (e) {
-              console.error("Error seeding task", e);
-              handleFirestoreError(e, OperationType.CREATE, `tasks/${task.id}`);
-            }
-          }
-        } else {
-          const tasksData: Task[] = [];
-          snapshot.forEach((doc) => {
-            tasksData.push({ id: doc.id, ...doc.data() } as Task);
-          });
-          // Sort by creation date descending
-          tasksData.sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          );
-          setTasks(tasksData);
-        }
+      (snapshot) => {
+        const tasksData: Task[] = [];
+        snapshot.forEach((doc) => {
+          tasksData.push({ id: doc.id, ...doc.data() } as Task);
+        });
+        // Sort by creation date descending
+        tasksData.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+        setTasks(tasksData);
       },
       (error) => {
         console.error("Firestore Error:", error);
@@ -97,8 +85,35 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetTasks = async () => {
+    if (!currentUser) return;
+    try {
+      const { getDocs, query, where } = await import("firebase/firestore");
+      
+      // 1. Delete all tasks
+      const tasksSnap = await getDocs(collection(db, "tasks"));
+      for (const taskDoc of tasksSnap.docs) {
+        await deleteDoc(doc(db, "tasks", taskDoc.id));
+      }
+      
+      // 2. Delete all users except the current one (to keep the session alive)
+      const usersSnap = await getDocs(query(collection(db, "users"), where("id", "!=", currentUser.id)));
+      for (const userDoc of usersSnap.docs) {
+        await deleteDoc(doc(db, "users", userDoc.id));
+      }
+
+      // Reload to ensure everything is fresh
+      window.location.reload();
+    } catch (error) {
+      console.error("Error resetting tasks:", error);
+      handleFirestoreError(error, OperationType.DELETE, "tasks");
+    }
+  };
+
   return (
-    <TaskContext.Provider value={{ tasks, addTask, updateTask, deleteTask }}>
+    <TaskContext.Provider
+      value={{ tasks, addTask, updateTask, deleteTask, resetTasks }}
+    >
       {children}
     </TaskContext.Provider>
   );

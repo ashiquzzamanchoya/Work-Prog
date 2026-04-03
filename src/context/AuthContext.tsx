@@ -47,9 +47,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             expectedRole = "Graphics Designer";
           }
 
+          let userData: AppUser;
+
           if (!userSnap.exists()) {
             // Create new user profile
-            const appUser: AppUser = {
+            userData = {
               id: firebaseUser.uid,
               name: firebaseUser.displayName || "New User",
               email: firebaseUser.email || "",
@@ -58,32 +60,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 `https://ui-avatars.com/api/?name=${firebaseUser.displayName || "User"}`,
               role: expectedRole,
             };
-            await setDoc(userRef, appUser);
+            await setDoc(userRef, userData);
           } else {
+            userData = userSnap.data() as AppUser;
             // If user exists, check if role needs update (only for these specific emails)
-            const currentData = userSnap.data() as AppUser;
             const specialEmails = ["rodbonds1169@gmail.com", "ashiquzzamanchoya@gmail.com", "lazerlit.me@gmail.com"];
-            if (specialEmails.includes(firebaseUser.email || "") && currentData.role !== expectedRole) {
+            if (specialEmails.includes(firebaseUser.email || "") && userData.role !== expectedRole) {
               await updateDoc(userRef, { role: expectedRole });
+              userData.role = expectedRole;
             }
           }
           
+          // Set user immediately to speed up redirection
+          setCurrentUser(userData);
+          setIsLoading(false);
+
           // Listen to real-time updates for the current user (e.g. role changes)
           userUnsubscribe = onSnapshot(userRef, (docSnap) => {
             if (docSnap.exists()) {
               setCurrentUser(docSnap.data() as AppUser);
             }
-            setIsLoading(false);
           }, (error) => {
             console.error("Error listening to user data:", error);
-            setIsLoading(false);
-            handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+            // Don't set isLoading to false here as it's already false
+            // handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
           });
 
         } catch (error) {
           console.error("Error fetching user data:", error);
           setIsLoading(false);
-          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+          // Only throw if we don't have a user yet
+          if (!currentUser) {
+            // handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+          }
         }
       } else {
         setCurrentUser(null);

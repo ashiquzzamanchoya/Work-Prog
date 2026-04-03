@@ -29,19 +29,33 @@ import {
   Clock,
   MoreHorizontal,
   Plus,
+  RotateCcw,
 } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import NewTaskModal from "@/components/NewTaskModal";
 
 export default function TaskBoard() {
-  const { tasks, updateTask } = useTasks();
+  const { tasks, updateTask, resetTasks } = useTasks();
   const { currentUser } = useAuth();
   const { users } = useUsers();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [filter, setFilter] = useState<"all" | "mine">("all");
 
   if (!currentUser) return null;
+
+  const isBoss = currentUser.role === "Boss" || currentUser.role === "admin" || currentUser.email === "lazerlit.me@gmail.com";
+
+  const handleReset = async () => {
+    if (!window.confirm("Are you sure you want to FRESH START? This will delete all current tasks and other user profiles to give you a clean slate.")) return;
+    setIsResetting(true);
+    try {
+      await resetTasks();
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const displayTasks =
     filter === "mine"
@@ -142,6 +156,17 @@ export default function TaskBoard() {
           >
             {filter === "mine" ? "My Tasks" : "All Tasks"}
           </button>
+          {isBoss && (
+            <button
+              onClick={handleReset}
+              disabled={isResetting}
+              className="bg-danger/10 hover:bg-danger/20 text-danger px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-danger/20 flex items-center gap-2 disabled:opacity-50"
+              title="FRESH START: Delete all tasks and other user profiles"
+            >
+              <RotateCcw size={16} className={isResetting ? "animate-spin" : ""} />
+              Fresh Start
+            </button>
+          )}
           <button
             onClick={() => setIsNewTaskModalOpen(true)}
             className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
@@ -151,7 +176,7 @@ export default function TaskBoard() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 lg:p-8 hide-scrollbar">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 lg:p-8">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -211,7 +236,7 @@ function Column({
 
       <div
         ref={setNodeRef}
-        className="flex-1 overflow-y-auto hide-scrollbar bg-surface/30 rounded-xl p-2 border border-surface-border/50 min-h-[150px]"
+        className="flex-1 overflow-y-auto bg-surface/30 rounded-xl p-2 border border-surface-border/50 min-h-[150px]"
       >
         <SortableContext
           items={tasks.map((t) => t.id)}
@@ -319,18 +344,6 @@ function TaskCard({
               className="w-6 h-6 rounded-full border border-surface-border"
             />
           )}
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            {task.commentsCount > 0 && (
-              <span className="flex items-center gap-1">
-                <MessageSquare size={12} /> {task.commentsCount}
-              </span>
-            )}
-            {task.attachmentsCount > 0 && (
-              <span className="flex items-center gap-1">
-                <Paperclip size={12} /> {task.attachmentsCount}
-              </span>
-            )}
-          </div>
         </div>
         <div
           className={cn(

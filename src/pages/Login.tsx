@@ -10,7 +10,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, isLoading: isAuthLoading } = useAuth();
 
   useEffect(() => {
     if (currentUser) {
@@ -23,13 +23,16 @@ export default function Login() {
     setError(null);
     try {
       await signInWithPopup(auth, googleProvider);
+      // After popup succeeds, AuthContext will take over.
+      // We keep isLoading true until currentUser is set or an error occurs.
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to sign in");
-    } finally {
       setIsLoading(false);
     }
   };
+
+  const showLoading = isLoading || !!(isAuthLoading && auth.currentUser);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -58,7 +61,7 @@ export default function Login() {
 
         <button
           onClick={handleGoogleLogin}
-          disabled={isLoading}
+          disabled={showLoading}
           className="w-full py-3.5 px-4 bg-white text-black hover:bg-gray-100 rounded-xl font-medium transition-colors flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <img
@@ -66,7 +69,7 @@ export default function Login() {
             alt="Google"
             className="w-5 h-5"
           />
-          {isLoading ? "Signing in..." : "Continue with Google"}
+          {showLoading ? "Signing in..." : "Continue with Google"}
         </button>
       </motion.div>
     </div>

@@ -7,16 +7,17 @@ import {
   AlertCircle,
   TrendingUp,
   MoreHorizontal,
-  MessageSquare,
-  Paperclip,
 } from "lucide-react";
 import { useTasks } from "@/context/TaskContext";
 import { useAuth } from "@/context/AuthContext";
 import { useUsers } from "@/context/UserContext";
 import { cn } from "@/lib/utils";
 import { format, isToday, isPast } from "date-fns";
+import { RotateCcw } from "lucide-react";
 
-const containerVariants = {
+import { Variants } from "framer-motion";
+
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -24,7 +25,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
     y: 0,
@@ -34,12 +35,25 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
-  const { tasks } = useTasks();
+  const { tasks, resetTasks } = useTasks();
   const { currentUser } = useAuth();
   const { users } = useUsers();
+  const [isResetting, setIsResetting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<
     "focus" | "active" | "due" | "review" | "completed"
   >("focus");
+
+  const isAdminUser = currentUser.role === "Boss" || currentUser.role === "admin" || currentUser.email === "lazerlit.me@gmail.com";
+
+  const handleReset = async () => {
+    if (!window.confirm("Are you sure you want to FRESH START? This will delete all current tasks and other user profiles to give you a clean slate.")) return;
+    setIsResetting(true);
+    try {
+      await resetTasks();
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   if (!currentUser) return null;
 
@@ -55,8 +69,7 @@ export default function Dashboard() {
   let recentActivity: any[] = [];
 
   if (
-    currentUser.role === "Graphics Designer" ||
-    currentUser.role === "Manager"
+    !isAdminUser && (currentUser.role === "Graphics Designer" || currentUser.role === "Manager")
   ) {
     const myUrgent = myTasks.filter(
       (t) =>
@@ -116,14 +129,14 @@ export default function Dashboard() {
 
   const getSectionTitle = () => {
     if (activeFilter === "focus")
-      return currentUser.role !== "Boss" ? "Today's Focus" : "Needs Attention";
+      return (!isAdminUser) ? "Today's Focus" : "Needs Attention";
     if (activeFilter === "active")
-      return currentUser.role !== "Boss"
+      return (!isAdminUser)
         ? "My Active Tasks"
         : "Total Active Tasks";
     if (activeFilter === "due") return "Due Today";
     if (activeFilter === "review")
-      return currentUser.role === "Boss"
+      return isAdminUser
         ? "Awaiting Feedback"
         : "Pending Review";
     if (activeFilter === "completed") return "Completed Tasks";
@@ -137,14 +150,28 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl font-display font-bold mb-2">
-          Good morning, {currentUser.name.split(" ")[0]}
-        </h1>
-        <p className="text-gray-400">
-          {currentUser.role !== "Boss"
-            ? "Here are your tasks for today."
-            : "Here's the high-level overview of all projects."}
-        </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-display font-bold mb-2">
+              Good morning, {currentUser.name.split(" ")[0]}
+            </h1>
+            <p className="text-gray-400">
+              {!isAdminUser
+                ? "Here are your tasks for today."
+                : "Here's the high-level overview of all projects."}
+            </p>
+          </div>
+          {isAdminUser && (
+            <button
+              onClick={handleReset}
+              disabled={isResetting}
+              className="flex items-center gap-2 px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-xl border border-danger/20 transition-all text-sm font-bold disabled:opacity-50"
+            >
+              <RotateCcw size={16} className={isResetting ? "animate-spin" : ""} />
+              Fresh Start (Clear All)
+            </button>
+          )}
+        </div>
       </motion.div>
 
       <motion.div
@@ -155,7 +182,7 @@ export default function Dashboard() {
       >
         <KpiCard
           title={
-            currentUser.role !== "Boss" ? "My Active Tasks" : "Total Active"
+            (!isAdminUser) ? "My Active Tasks" : "Total Active"
           }
           value={activeTasks.length}
           trend="+3 this week"
@@ -166,9 +193,9 @@ export default function Dashboard() {
           onClick={() => setActiveFilter("active")}
         />
         <KpiCard
-          title={currentUser.role !== "Boss" ? "Due Today" : "Urgent"}
+          title={(!isAdminUser) ? "Due Today" : "Urgent"}
           value={dueTodayTasks.length}
-          trend={currentUser.role !== "Boss" ? "2 urgent" : "Needs attention"}
+          trend={(!isAdminUser) ? "2 urgent" : "Needs attention"}
           icon={Clock}
           color="text-warning"
           bg="bg-warning/10"
@@ -177,7 +204,7 @@ export default function Dashboard() {
         />
         <KpiCard
           title={
-            currentUser.role === "Boss" ? "Awaiting Feedback" : "Pending Review"
+            isAdminUser ? "Awaiting Feedback" : "Pending Review"
           }
           value={reviewTasks.length}
           trend="Needs attention"
@@ -458,14 +485,6 @@ function TaskCard({ task }: { task: any; key?: string | number }) {
               title={assignee.name}
             />
           )}
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              <MessageSquare size={12} /> {task.commentsCount}
-            </span>
-            <span className="flex items-center gap-1">
-              <Paperclip size={12} /> {task.attachmentsCount}
-            </span>
-          </div>
         </div>
         <div
           className={cn(

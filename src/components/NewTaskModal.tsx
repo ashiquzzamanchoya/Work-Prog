@@ -46,8 +46,6 @@ export default function NewTaskModal({
       dueDate: dueDate || new Date().toISOString(),
       createdAt: new Date().toISOString(),
       progress: 0,
-      commentsCount: 0,
-      attachmentsCount: 0,
     };
 
     addTask(newTask);
