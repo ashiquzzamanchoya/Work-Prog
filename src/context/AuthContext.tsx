@@ -4,7 +4,7 @@ import {
   User as FirebaseUser,
   signOut,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase";
 import { handleFirestoreError, OperationType } from "@/lib/firestore-error";
 
@@ -37,6 +37,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const userSnap = await getDoc(userRef);
 
+          // Determine expected role based on email
+          let expectedRole = "Graphics Designer"; // Default role
+          if (firebaseUser.email === "rodbonds1169@gmail.com") {
+            expectedRole = "Boss";
+          } else if (firebaseUser.email === "ashiquzzamanchoya@gmail.com") {
+            expectedRole = "Manager";
+          } else if (firebaseUser.email === "lazerlit.me@gmail.com") {
+            expectedRole = "Graphics Designer";
+          }
+
           if (!userSnap.exists()) {
             // Create new user profile
             const appUser: AppUser = {
@@ -46,9 +56,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               avatar:
                 firebaseUser.photoURL ||
                 `https://ui-avatars.com/api/?name=${firebaseUser.displayName || "User"}`,
-              role: "Graphics Designer", // Default role
+              role: expectedRole,
             };
             await setDoc(userRef, appUser);
+          } else {
+            // If user exists, check if role needs update (only for these specific emails)
+            const currentData = userSnap.data() as AppUser;
+            const specialEmails = ["rodbonds1169@gmail.com", "ashiquzzamanchoya@gmail.com", "lazerlit.me@gmail.com"];
+            if (specialEmails.includes(firebaseUser.email || "") && currentData.role !== expectedRole) {
+              await updateDoc(userRef, { role: expectedRole });
+            }
           }
           
           // Listen to real-time updates for the current user (e.g. role changes)

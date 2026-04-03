@@ -48,8 +48,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "lazerlit.me@gmail.com" && request.auth.token.email_verified == true));
+        (request.auth.token.email == "lazerlit.me@gmail.com" && request.auth.token.email_verified == true);
     }
 
     function isValidUser(data) {
@@ -69,26 +68,28 @@ service cloud.firestore {
              data.createdAt is string && data.createdAt.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
     }
 
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
     
     match /users/{userId} {
-      // Users can read their own profile. Admins can read all.
-      // For this app, we allow all authenticated users to read profiles to show names/avatars in tasks.
       allow read: if isAuthenticated();
       
       // Only the owner can create their profile.
-      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
-                    (request.resource.data.role != 'admin' || isAdmin());
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
       
       // Only the owner or an admin can update.
       allow update: if (isOwner(userId) || isAdmin()) && 
                     isValidUser(request.resource.data) &&
-                    (request.resource.data.role == resource.data.role || isAdmin());
+                    (areImmutableFieldsUnchanged(['role']) || isAdmin());
     }
 
     match /tasks/{taskId} {
+      // All members can see other members' work.
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidTask(request.resource.data);
       allow update: if isAuthenticated() && isValidTask(request.resource.data);
