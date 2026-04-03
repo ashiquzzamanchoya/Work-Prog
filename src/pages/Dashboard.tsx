@@ -46,6 +46,7 @@ export default function Dashboard() {
   >("focus");
 
   const isAdminUser = currentUser.role === "Boss" || currentUser.role === "admin" || currentUser.email === "lazerlit.me@gmail.com";
+  const isBossView = currentUser.role === "Boss" || currentUser.role === "admin";
 
   const handleReset = async () => {
     if (!window.confirm("Are you sure you want to FRESH START? This will delete all current tasks and other user profiles to give you a clean slate.")) return;
@@ -71,7 +72,7 @@ export default function Dashboard() {
   let recentActivity: any[] = [];
 
   if (
-    !isAdminUser && (currentUser.role === "Graphics Designer" || currentUser.role === "Manager")
+    !isBossView && (currentUser.role === "Graphics Designer" || currentUser.role === "Manager")
   ) {
     const myUrgent = myTasks.filter(
       (t) =>
@@ -135,14 +136,14 @@ export default function Dashboard() {
 
   const getSectionTitle = () => {
     if (activeFilter === "focus")
-      return (!isAdminUser) ? "Today's Focus" : "Needs Attention";
+      return (!isBossView) ? "Today's Focus" : "Needs Attention";
     if (activeFilter === "active")
-      return (!isAdminUser)
+      return (!isBossView)
         ? "My Active Tasks"
         : "Total Active Tasks";
     if (activeFilter === "due") return "Due Today";
     if (activeFilter === "review")
-      return isAdminUser
+      return isBossView
         ? "Awaiting Feedback"
         : "Pending Review";
     if (activeFilter === "completed") return "Completed Tasks";
@@ -162,7 +163,7 @@ export default function Dashboard() {
               Good morning, {currentUser.name.split(" ")[0]}
             </h1>
             <p className="text-gray-400">
-              {!isAdminUser
+              {!isBossView
                 ? "Here are your tasks for today."
                 : "Here's the high-level overview of all projects."}
             </p>
@@ -187,7 +188,7 @@ export default function Dashboard() {
         className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8"
       >
         <KpiCard
-          title={!isAdminUser ? "My Active Tasks" : "Total Active"}
+          title={!isBossView ? "My Active Tasks" : "Total Active"}
           value={activeTasks.length}
           trend="+3 this week"
           icon={TrendingUp}
@@ -207,9 +208,9 @@ export default function Dashboard() {
           onClick={() => {}}
         />
         <KpiCard
-          title={!isAdminUser ? "Due Today" : "Urgent"}
+          title={!isBossView ? "Due Today" : "Urgent"}
           value={dueTodayTasks.length}
-          trend={!isAdminUser ? "2 urgent" : "Needs attention"}
+          trend={!isBossView ? "2 urgent" : "Needs attention"}
           icon={Clock}
           color="text-warning"
           bg="bg-warning/10"
@@ -217,7 +218,7 @@ export default function Dashboard() {
           onClick={() => setActiveFilter("due")}
         />
         <KpiCard
-          title={isAdminUser ? "Awaiting Feedback" : "Pending Review"}
+          title={isBossView ? "Awaiting Feedback" : "Pending Review"}
           value={reviewTasks.length}
           trend="Needs attention"
           icon={AlertCircle}
@@ -383,7 +384,14 @@ export default function Dashboard() {
             </h2>
             <div className="glass-card rounded-2xl p-5 space-y-5">
               {users.map((user) => {
-                const workload = Math.floor(Math.random() * 100);
+                const userActiveTasks = tasks.filter(
+                  (t) => t.assigneeId === user.id && t.status !== "Completed",
+                );
+                // Calculate workload: 5 tasks = 100%
+                const workload = Math.min(
+                  Math.round((userActiveTasks.length / 5) * 100),
+                  100,
+                );
                 return (
                   <div key={user.id} className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -397,12 +405,14 @@ export default function Dashboard() {
                           {user.name}
                         </span>
                       </div>
-                      <span className="text-xs text-gray-400">{workload}%</span>
+                      <span className="text-xs text-gray-400">
+                        {userActiveTasks.length} tasks ({workload}%)
+                      </span>
                     </div>
                     <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
                       <div
                         className={cn(
-                          "h-full rounded-full",
+                          "h-full rounded-full transition-all duration-500",
                           workload > 80
                             ? "bg-danger"
                             : workload > 60
