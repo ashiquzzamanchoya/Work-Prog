@@ -34,6 +34,7 @@ export interface Task {
   reporterId: string;
   dueDate: string;
   createdAt: string;
+  updatedAt?: string;
   progress: number;
 }
 

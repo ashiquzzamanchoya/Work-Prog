@@ -30,12 +30,13 @@ import {
   MoreHorizontal,
   Plus,
   RotateCcw,
+  Trash2,
 } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import NewTaskModal from "@/components/NewTaskModal";
 
 export default function TaskBoard() {
-  const { tasks, updateTask, resetTasks } = useTasks();
+  const { tasks, updateTask, resetTasks, deleteTask } = useTasks();
   const { currentUser } = useAuth();
   const { users } = useUsers();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -123,6 +124,15 @@ export default function TaskBoard() {
     if (activeId === overId) return;
   };
 
+  const handleDeleteTask = async (task: Task) => {
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    await deleteTask(task.id);
+  };
+
+  const handleStatusChange = async (task: Task, newStatus: string) => {
+    await updateTask({ ...task, status: newStatus as any });
+  };
+
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null;
 
   return (
@@ -190,6 +200,8 @@ export default function TaskBoard() {
                 key={status}
                 status={status}
                 tasks={displayTasks.filter((t) => t.status === status)}
+                onDelete={handleDeleteTask}
+                onStatusChange={handleStatusChange}
               />
             ))}
           </div>
@@ -210,9 +222,13 @@ export default function TaskBoard() {
 function Column({
   status,
   tasks,
+  onDelete,
+  onStatusChange,
 }: {
   status: string;
   tasks: Task[];
+  onDelete: (task: Task) => void;
+  onStatusChange: (task: Task, status: string) => void;
   key?: string | number;
 }) {
   const { setNodeRef } = useSortable({
@@ -244,7 +260,7 @@ function Column({
         >
           <div className="space-y-3">
             {tasks.map((task) => (
-              <SortableTaskCard key={task.id} task={task} />
+              <SortableTaskCard key={task.id} task={task} onDelete={onDelete} onStatusChange={onStatusChange} />
             ))}
           </div>
         </SortableContext>
@@ -253,7 +269,7 @@ function Column({
   );
 }
 
-function SortableTaskCard({ task }: { task: Task; key?: string | number }) {
+function SortableTaskCard({ task, onDelete, onStatusChange }: { task: Task; onDelete: (task: Task) => void; onStatusChange: (task: Task, status: string) => void; key?: string | number }) {
   const {
     setNodeRef,
     attributes,
@@ -283,7 +299,7 @@ function SortableTaskCard({ task }: { task: Task; key?: string | number }) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <TaskCard task={task} />
+      <TaskCard task={task} onDelete={onDelete} onStatusChange={onStatusChange} />
     </div>
   );
 }
@@ -291,9 +307,13 @@ function SortableTaskCard({ task }: { task: Task; key?: string | number }) {
 function TaskCard({
   task,
   isOverlay,
+  onDelete,
+  onStatusChange,
 }: {
   task: Task;
   isOverlay?: boolean;
+  onDelete?: (task: Task) => void;
+  onStatusChange?: (task: Task, status: string) => void;
   key?: string | number;
 }) {
   const navigate = useNavigate();
@@ -326,8 +346,14 @@ function TaskCard({
             {task.priority}
           </span>
         </div>
-        <button className="text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-          <MoreHorizontal size={16} />
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete?.(task);
+          }}
+          className="text-gray-500 hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <Trash2 size={16} />
         </button>
       </div>
 
@@ -337,6 +363,16 @@ function TaskCard({
 
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center gap-3">
+          <select
+            value={task.status}
+            onChange={(e) => onStatusChange?.(task, e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-surface text-xs text-gray-200 border border-surface-border hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 cursor-pointer transition-all outline-none"
+          >
+            {statuses.map(s => (
+              <option key={s} value={s} className="text-gray-900 bg-white">{s}</option>
+            ))}
+          </select>
           {assignee && (
             <img
               src={assignee.avatar}

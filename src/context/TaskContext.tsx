@@ -57,7 +57,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const addTask = async (task: Task) => {
     try {
-      await setDoc(doc(db, "tasks", task.id), task);
+      const taskData = { ...task, updatedAt: new Date().toISOString() };
+      await setDoc(doc(db, "tasks", task.id), taskData);
     } catch (error) {
       console.error("Error adding task:", error);
       handleFirestoreError(error, OperationType.CREATE, `tasks/${task.id}`);
@@ -69,7 +70,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       const taskRef = doc(db, "tasks", updatedTask.id);
       // Remove id from the update payload
       const { id, ...updateData } = updatedTask;
-      await updateDoc(taskRef, updateData as any);
+      await updateDoc(taskRef, { ...updateData, updatedAt: new Date().toISOString() } as any);
     } catch (error) {
       console.error("Error updating task:", error);
       handleFirestoreError(error, OperationType.UPDATE, `tasks/${updatedTask.id}`);

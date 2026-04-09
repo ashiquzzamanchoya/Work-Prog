@@ -9,6 +9,7 @@ import {
   X,
   ChevronUp,
   LogOut,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -25,6 +26,10 @@ export default function Layout() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { currentUser, logout } = useAuth();
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const currentNavItems = currentUser?.email === "lazerlit.me@gmail.com" 
+    ? [...navItems, { name: "Personal Workspace", path: "/personal", icon: User }]
+    : navItems;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -82,7 +87,7 @@ export default function Layout() {
             <div className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Menu
             </div>
-            {navItems.map((item) => (
+            {currentNavItems.map((item) => (
               <NavLink
                 key={item.name}
                 to={item.path}

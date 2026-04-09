@@ -11,9 +11,11 @@ import TaskBoard from "./pages/TaskBoard";
 import TaskDetail from "./pages/TaskDetail";
 import Login from "./pages/Login";
 import { TaskProvider } from "./context/TaskContext";
+import { PersonalTaskProvider } from "./context/PersonalTaskContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { UserProvider } from "./context/UserContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import PersonalWorkspace from "./pages/PersonalWorkspace";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { currentUser, isLoading } = useAuth();
@@ -39,9 +41,10 @@ export default function App() {
       <AuthProvider>
         <UserProvider>
           <TaskProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
+            <PersonalTaskProvider>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
                 <Route
                   path="/"
                   element={
@@ -52,6 +55,7 @@ export default function App() {
                 >
                   <Route index element={<Dashboard />} />
                   <Route path="board" element={<TaskBoard />} />
+                  <Route path="personal" element={<PersonalWorkspace />} />
                   <Route path="task/:id" element={<TaskDetail />} />
                   {/* Placeholders for other routes */}
                   <Route
@@ -135,6 +139,7 @@ export default function App() {
                 </Route>
               </Routes>
             </BrowserRouter>
+            </PersonalTaskProvider>
           </TaskProvider>
         </UserProvider>
       </AuthProvider>

@@ -13,7 +13,7 @@ import { useTasks } from "@/context/TaskContext";
 import { useAuth } from "@/context/AuthContext";
 import { useUsers } from "@/context/UserContext";
 import { cn } from "@/lib/utils";
-import { format, isToday, isPast } from "date-fns";
+import { format, isToday, isPast, formatDistanceToNow } from "date-fns";
 import { RotateCcw } from "lucide-react";
 import { categories } from "@/data/mockData";
 
@@ -76,7 +76,7 @@ export default function Dashboard() {
   ) {
     const myUrgent = myTasks.filter(
       (t) =>
-        t.priority === "Urgent" ||
+        (t.priority === "Urgent" && t.status !== "Completed") ||
         (isPast(new Date(t.dueDate)) && t.status !== "Completed"),
     );
     const teamReview =
@@ -98,15 +98,11 @@ export default function Dashboard() {
               t.status === "Waiting for Boss Feedback",
           );
     completedTasks = myTasks.filter((t) => t.status === "Completed");
-    recentActivity = Array.from(new Set([...myTasks, ...tasksIManage])).slice(
-      0,
-      4,
-    );
   } else {
     // Boss sees everything urgent or waiting for feedback
     focusTasks = tasks.filter(
       (t) =>
-        t.status === "Waiting for Boss Feedback" || t.priority === "Urgent",
+        (t.status === "Waiting for Boss Feedback" || t.priority === "Urgent") && t.status !== "Completed",
     );
     activeTasks = tasks.filter((t) => t.status !== "Completed");
     dueTodayTasks = tasks.filter(
@@ -114,8 +110,19 @@ export default function Dashboard() {
     );
     reviewTasks = tasks.filter((t) => t.status === "Waiting for Boss Feedback");
     completedTasks = tasks.filter((t) => t.status === "Completed");
-    recentActivity = tasks.slice(0, 4);
   }
+
+  const allRelevantTasks = !isBossView && (currentUser.role === "Graphics Designer" || currentUser.role === "Manager")
+    ? Array.from(new Set([...myTasks, ...tasksIManage]))
+    : tasks;
+
+  recentActivity = allRelevantTasks
+    .sort((a, b) => {
+      const dateA = new Date(a.updatedAt || a.createdAt).getTime();
+      const dateB = new Date(b.updatedAt || b.createdAt).getTime();
+      return dateB - dateA;
+    })
+    .slice(0, 4);
 
   const activeProjects = Array.from(
     new Set(tasks.filter((t) => t.status !== "Completed").map((t) => t.category)),
@@ -316,7 +323,9 @@ export default function Dashboard() {
                     <p className="text-sm font-medium text-white mt-0.5 truncate">
                       {task.title}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatDistanceToNow(new Date(task.updatedAt || task.createdAt), { addSuffix: true })}
+                    </p>
                   </div>
                 </div>
               ))}
