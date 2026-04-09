@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   DndContext,
@@ -38,6 +39,7 @@ export default function PersonalWorkspace() {
   const { currentUser } = useAuth();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<any | null>(null);
 
   if (!currentUser || currentUser.email !== "lazerlit.me@gmail.com") {
     return (
@@ -120,12 +122,17 @@ export default function PersonalWorkspace() {
   };
 
   const handleDeleteTask = async (task: any) => {
-    if (!window.confirm("Are you sure you want to delete this task?")) return;
-    if (task.isMainTask) {
-      await deleteTask(task.id);
+    setTaskToDelete(task);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!taskToDelete) return;
+    if (taskToDelete.isMainTask) {
+      await deleteTask(taskToDelete.id);
     } else {
-      await deletePersonalTask(task.id);
+      await deletePersonalTask(taskToDelete.id);
     }
+    setTaskToDelete(null);
   };
 
   const handleStatusChange = (task: any, newStatus: string) => {
@@ -190,6 +197,35 @@ export default function PersonalWorkspace() {
           onAdd={addPersonalTask}
           userId={currentUser.id}
         />
+      )}
+
+      {taskToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-surface border border-surface-border rounded-2xl shadow-2xl w-full max-w-sm p-6"
+          >
+            <h3 className="text-xl font-display font-bold mb-2">Delete Task?</h3>
+            <p className="text-gray-400 text-sm mb-6">
+              Are you sure you want to delete "{taskToDelete.title}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setTaskToDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteTask}
+                className="px-4 py-2 bg-danger hover:bg-danger/90 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );
@@ -289,6 +325,7 @@ function TaskCard({
   onStatusChange?: (task: any, status: string) => void;
   key?: string | number;
 }) {
+  const navigate = useNavigate();
   const isLate =
     isPast(new Date(task.dueDate)) && !isToday(new Date(task.dueDate));
 
@@ -296,6 +333,7 @@ function TaskCard({
 
   return (
     <div
+      onClick={() => navigate(`/task/${task.id}`)}
       className={cn(
         "glass-card rounded-xl p-4 group border border-surface-border cursor-grab active:cursor-grabbing bg-surface/80 relative",
         isOverlay && "rotate-2 scale-105 shadow-2xl border-primary/50",

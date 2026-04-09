@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { statuses, Task } from "@/data/mockData";
 import { useTasks } from "@/context/TaskContext";
+import { usePersonalTasks } from "@/context/PersonalTaskContext";
 import { useUsers } from "@/context/UserContext";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
@@ -23,12 +24,14 @@ export default function TaskDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { tasks, updateTask } = useTasks();
+  const { personalTasks, updatePersonalTask } = usePersonalTasks();
   const { users } = useUsers();
   const { currentUser } = useAuth();
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
 
   // For demo purposes, if no ID or not found, use the first task
-  const task = tasks.find((t) => t.id === id) || tasks[0];
+  const task = tasks.find((t) => t.id === id) || personalTasks.find((t) => t.id === id) || tasks[0];
+  const isPersonalTask = personalTasks.some((t) => t.id === task?.id);
   const assignee = users.find((u) => u.id === task?.assigneeId);
   const reporter = users.find((u) => u.id === task?.reporterId);
   const isLate = task
@@ -281,12 +284,19 @@ export default function TaskDetail() {
               </h3>
               <select
                 value={task.status}
-                onChange={(e) =>
-                  updateTask({
-                    ...task,
-                    status: e.target.value as Task["status"],
-                  })
-                }
+                onChange={(e) => {
+                  if (isPersonalTask) {
+                    updatePersonalTask({
+                      ...task,
+                      status: e.target.value as any,
+                    } as any);
+                  } else {
+                    updateTask({
+                      ...task,
+                      status: e.target.value as any,
+                    } as any);
+                  }
+                }}
                 className="w-full bg-surface border border-surface-border rounded-xl p-3 text-sm text-white focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 cursor-pointer appearance-none"
               >
                 {statuses.map((s) => (
