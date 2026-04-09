@@ -28,6 +28,7 @@ import {
   Plus,
   X,
   Trash2,
+  Calendar,
 } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 
@@ -474,13 +475,19 @@ function NewPersonalTaskModal({ onClose, onAdd, userId }: { onClose: () => void,
               <label className="block text-sm font-medium text-gray-300 mb-1.5">
                 Due Date
               </label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-background border border-surface-border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full bg-background border border-surface-border rounded-xl pl-10 pr-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  required
+                />
+                <Calendar
+                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                />
+              </div>
             </div>
           </div>
 
